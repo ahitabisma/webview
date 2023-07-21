@@ -1,21 +1,20 @@
 package com.example.siakadwebview
 
-import android.app.Activity
+import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationManager
 import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
 import android.provider.MediaStore
-import android.util.Log
 import android.webkit.*
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.onesignal.OneSignal
-import java.io.File
-import java.io.IOException
 
 
 // OneSignal App ID
@@ -32,6 +31,8 @@ class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
         private const val FILE_CHOOSER_RESULT_CODE = 1
         private const val CAMERA_PERMISSION_REQUEST_CODE = 2
     }
+
+    private val LOCATION_PERMISSION_REQUEST_CODE = 1
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,27 +61,6 @@ class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
         webSettings.allowFileAccessFromFileURLs = true
         webSettings.allowUniversalAccessFromFileURLs = true
         webSettings.setGeolocationEnabled(true)
-//
-//        fun create_image(): File {
-//            val storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-//            val imageFile = File.createTempFile(
-//                "image_",  /* prefix */
-//                ".jpg",    /* suffix */
-//                storageDir /* directory */
-//            )
-//            return imageFile
-//        }
-//
-//        myARL = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-//            if (result.resultCode == Activity.RESULT_OK) {
-//                val data: Intent? = result.data
-//                data?.data?.let { uri ->
-//                    val uris = arrayOf(uri)
-//                    fileUploadCallback?.onReceiveValue(uris)
-//                    fileUploadCallback = null
-//                }
-//            }
-//        }
 
         webView.webChromeClient = object : WebChromeClient() {
             // For Android 4.1+
@@ -99,6 +79,54 @@ class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
                 requestCameraPermission()
                 return true
             }
+
+            val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
+            override fun onGeolocationPermissionsShowPrompt(
+                origin: String?,
+                callback: GeolocationPermissions.Callback
+            ) {
+                if (ContextCompat.checkSelfPermission(
+                        this@MainActivity,
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    ActivityCompat.requestPermissions(
+                        this@MainActivity,
+                        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                        LOCATION_PERMISSION_REQUEST_CODE
+                    )
+                } else {
+                    val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                    val location: Location? = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                    if (location != null) {
+                        val latitude: String = java.lang.String.valueOf(location.latitude)
+                        val longitude: String = java.lang.String.valueOf(location.longitude)
+                        val url = "http://app.softwaresekolah.my.id?lat=$latitude&long=$longitude"
+                        webView.loadUrl(url)
+                        callback.invoke(origin, true, true)
+                    } else {
+                        callback.invoke(origin, false, false)
+                    }
+                }
+            }
+
+
+            override fun onPermissionRequest(request: PermissionRequest) {
+                if (request.origin.toString().startsWith("http://")) {
+                    request.grant(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
+                } else {
+                    super.onPermissionRequest(request)
+                }
+            }
+        }
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // Request location permission if not granted
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), LOCATION_PERMISSION_REQUEST_CODE)
+        } else {
+            // Load the web page if location permission is granted
+            webView.loadUrl(url)
         }
 
 
@@ -140,16 +168,6 @@ class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
         }
     }
 
-//    private fun selectFile() {
-//        val contentSelectionIntent = Intent(Intent.ACTION_GET_CONTENT)
-//        contentSelectionIntent.addCategory(Intent.CATEGORY_OPENABLE)
-//        contentSelectionIntent.type = "*/*"
-//        val chooserIntent = Intent(Intent.ACTION_CHOOSER)
-//        chooserIntent.putExtra(Intent.EXTRA_INTENT, contentSelectionIntent)
-//        myARL.launch(chooserIntent)
-//        fileUploadCallback = null
-//    }
-
     // Handle camera permission request
     private fun requestCameraPermission() {
         if (checkSelfPermission(android.Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
@@ -163,25 +181,6 @@ class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
             )
         }
     }
-
-    // Handle the result of permission request
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
-        when (requestCode) {
-            CAMERA_PERMISSION_REQUEST_CODE -> {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // Camera permission granted, show the camera dialog
-                    showCameraDialog()
-                } else {
-                    // Camera permission denied, handle accordingly (e.g., show a message)
-                }
-            }
-        }
-    }
-
 
     // Show the camera dialog
     private fun showCameraDialog() {
@@ -201,6 +200,32 @@ class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
             }
         } else {
             super.onActivityResult(requestCode, resultCode, data)
+        }
+    }
+
+    // Handle the result of permission request
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String?>,
+        grantResults: IntArray
+    ) {
+        when (requestCode) {
+            CAMERA_PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // Camera permission granted, show the camera dialog
+                    showCameraDialog()
+                } else {
+                    // Camera permission denied, handle accordingly (e.g., show a message)
+                }
+            }
+            LOCATION_PERMISSION_REQUEST_CODE -> {
+                if (grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    webView.loadUrl(url)
+                }
+            }
+            else -> {
+                super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+            }
         }
     }
 }
