@@ -6,10 +6,13 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <!-- Pull Refresh -->
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipefresh"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
+
+        <!-- Webview -->
         <WebView
             android:id="@+id/SIAKAD"
             android:layout_width="match_parent"
