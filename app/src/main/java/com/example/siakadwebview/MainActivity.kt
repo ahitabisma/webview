@@ -23,6 +23,7 @@ import android.provider.MediaStore.ACTION_IMAGE_CAPTURE
 import android.provider.MediaStore.ACTION_VIDEO_CAPTURE
 import android.util.Log
 import android.webkit.*
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -41,8 +42,8 @@ const val ONESIGNAL_APP_ID = "0ee2b640-33f0-4849-91ed-f06e3fee211b"
 class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
     // Declare Variable
     private lateinit var webView : WebView
+    private val url = "https://app.softwaresekolah.my.id/"
     private lateinit var refreshLayout: SwipeRefreshLayout
-    private val url = "http://app.softwaresekolah.my.id/"
     private val LOCATION_PERMISSION_REQUEST_CODE = 1
 
     private val file_type = "*/*"
@@ -76,6 +77,13 @@ class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
         webSettings.allowFileAccessFromFileURLs = true
         webSettings.allowUniversalAccessFromFileURLs = true
         webSettings.setGeolocationEnabled(true)
+
+        ActivityCompat.requestPermissions(
+            this, arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ), 0
+        )
 
         webView.webChromeClient = object : WebChromeClient() {
             // Input File
@@ -174,38 +182,72 @@ class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
             }
 
             // Location
-            val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
             override fun onGeolocationPermissionsShowPrompt(
                 origin: String?,
                 callback: GeolocationPermissions.Callback
             ) {
-                if (ContextCompat.checkSelfPermission(
-                        this@MainActivity,
-                        Manifest.permission.ACCESS_FINE_LOCATION
-                    ) != PackageManager.PERMISSION_GRANTED
-                ) {
-                    ActivityCompat.requestPermissions(
-                        this@MainActivity,
-                        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                        LOCATION_PERMISSION_REQUEST_CODE
-                    )
-                } else {
-                    val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-                    val location: Location? = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                    if (location != null) {
-                        val latitude: String = java.lang.String.valueOf(location.latitude)
-                        val longitude: String = java.lang.String.valueOf(location.longitude)
-                        val url = "http://app.softwaresekolah.my.id?lat=$latitude&long=$longitude"
-                        webView.loadUrl(url)
-                        callback.invoke(origin, true, true)
-                    } else {
-                        callback.invoke(origin, false, false)
-                    }
-                }
+                callback.invoke(origin, true, false)
             }
+//            override fun onGeolocationPermissionsShowPrompt(
+//                origin: String?,
+//                callback: GeolocationPermissions.Callback
+//            ) {
+//                if (ContextCompat.checkSelfPermission(
+//                        this@MainActivity,
+//                        Manifest.permission.ACCESS_FINE_LOCATION
+//                    ) != PackageManager.PERMISSION_GRANTED
+//                ) {
+//                    ActivityCompat.requestPermissions(
+//                        this@MainActivity,
+//                        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+//                        LOCATION_PERMISSION_REQUEST_CODE
+//                    )
+//                } else {
+//                    val location: Location? = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+//                    if (location != null) {
+//                        val latitude = location.latitude.toString()
+//                        val longitude = location.longitude.toString()
+//                        val url = "https://app.softwaresekolah.my.id/?lat=$latitude&long=$longitude"
+//                        webView.loadUrl(url)
+//                        callback.invoke(origin, true, true)
+//                    } else {
+//                        callback.invoke(origin, false, false)
+//                    }
+//                }
+//            }
+
+//            val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+//            override fun onGeolocationPermissionsShowPrompt(
+//                origin: String?,
+//                callback: GeolocationPermissions.Callback
+//            ) {
+//                if (ContextCompat.checkSelfPermission(
+//                        this@MainActivity,
+//                        Manifest.permission.ACCESS_FINE_LOCATION
+//                    ) != PackageManager.PERMISSION_GRANTED
+//                ) {
+//                    ActivityCompat.requestPermissions(
+//                        this@MainActivity,
+//                        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+//                        LOCATION_PERMISSION_REQUEST_CODE
+//                    )
+//                } else {
+//                    val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+//                    val location: Location? = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+//                    if (location != null) {
+//                        val latitude: String = java.lang.String.valueOf(location.latitude)
+//                        val longitude: String = java.lang.String.valueOf(location.longitude)
+//                        val url = "https://app.softwaresekolah.my.id/?lat=$latitude&long=$longitude"
+//                        webView.loadUrl(url)
+//                        callback.invoke(origin, true, true)
+//                    } else {
+//                        callback.invoke(origin, false, false)
+//                    }
+//                }
+//            }
 
             override fun onPermissionRequest(request: PermissionRequest) {
-                if (request.origin.toString().startsWith("http://")) {
+                if (request.origin.toString().startsWith("https://")) {
                     request.grant(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
                 } else {
                     super.onPermissionRequest(request)
@@ -222,7 +264,7 @@ class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
         // Disable Zoom, Copy Paste
         webSettings.setSupportZoom(false)
         webSettings.builtInZoomControls = false
-        webView.setOnLongClickListener { true }
+        // webView.setOnLongClickListener { true }
 
         // Swipe Refresh
         refreshLayout = findViewById(R.id.swipefresh)
@@ -235,6 +277,7 @@ class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
         OneSignal.promptForPushNotifications()
     }
 
+    // Back Button
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if(webView.canGoBack()){
@@ -244,19 +287,28 @@ class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
         }
     }
 
-    // Swipe Refresh
+    // Pull to Refresh
     override fun onRefresh() {
         webView.reload()
         refreshLayout.isRefreshing = false
     }
-
-    // Pull to Refresh
     private inner class MyWebViewClient : WebViewClient(){
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 return super.shouldOverrideUrlLoading(view, request)
         }
+
+//        override fun onPageFinished(view: WebView?, url: String?) {
+//            super.onPageFinished(view, url)
+//            url?.let { showToast("Current URL: $it") }
+//        }
     }
 
+    fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+
+    // Location
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String?>,
@@ -379,7 +431,4 @@ class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
             }
         }
     }
-
-
-
 }
