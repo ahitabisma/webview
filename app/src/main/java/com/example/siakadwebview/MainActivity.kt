@@ -6,7 +6,6 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ContentValues.TAG
-import android.content.Context
 import android.content.Intent
 import android.content.Intent.*
 import android.content.pm.PackageManager
@@ -51,6 +50,7 @@ class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
     private var file_data: ValueCallback<Uri>? = null
     private var file_path: ValueCallback<Array<Uri?>?>? = null
     private val file_req_code = 1
+    private var backPressedTime = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -278,13 +278,22 @@ class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
     }
 
     // Back Button
+//    @Deprecated("Deprecated in Java")
+//    override fun onBackPressed() {
+//        if(webView.canGoBack()){
+//            webView.goBack()
+//        }else{
+//            super.onBackPressed()
+//        }
+//    }
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        if(webView.canGoBack()){
-            webView.goBack()
-        }else{
+        if(backPressedTime + 2000 > System.currentTimeMillis()){
             super.onBackPressed()
+        }else{
+            Toast.makeText(applicationContext, "Tekan sekali lagi untuk keluar", Toast.LENGTH_SHORT).show()
         }
+        backPressedTime = System.currentTimeMillis()
     }
 
     // Pull to Refresh
@@ -303,9 +312,9 @@ class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
 //        }
     }
 
-    fun showToast(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-    }
+//    fun showToast(message: String) {
+//        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+//    }
 
 
     // Location
